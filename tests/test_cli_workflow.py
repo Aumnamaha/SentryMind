@@ -298,9 +298,10 @@ class TestEdgeCases:
         with patch.object(agent, "query_local_qwen", return_value=MOCK_LLM_RESPONSE):
             analysis = agent.analyze_log(raw_log="", use_memory=True)
             assert "raw_log" in analysis
-            # With no memory and an empty log, it falls back gracefully
-            if analysis["use_memory"]:
-                pass  # may or may not have results depending on local store state
+            assert analysis["raw_log"] == ""
+            # With an empty log and no matching memory, it should fall back gracefully
+            assert analysis["memory_active"] is False
+            assert "Low" in analysis["confidence"]
 
     def test_analyze_with_empty_local_store(self):
         """Analyzing with a completely fresh agent (no seeded data) should still work."""
