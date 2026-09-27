@@ -1,0 +1,19 @@
+LLMs are great at fixing bugs. They're terrible at remembering they already fixed them.
+
+I built SentryMind — a DevOps agent that actually learns from production incidents instead of guessing the same wrong thing every time.
+
+Here's what changed with Hindsight persistent memory:
+
+Before (stateless):
+→ PostgreSQL pool exhaustion → "Restart the database"
+Generic triage, zero confidence
+Same dangerous guess on repeat
+
+After (with memory recall):
+→ Same error → "Run scripts/flush_pool.sh to drain idle connections. DO NOT restart DB."
+Exact runbook from past post-mortems recalled by semantic similarity
+Verified fix from Hindsight Bank
+
+Source: https://github.com/Aumnamaha/SentryMind
+
+#AIAgents #AI #Hindsight #AgentMemory #AIMemory #LLM

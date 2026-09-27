@@ -1,0 +1,35 @@
+# SentryMind: Autonomous DevOps Incident Response Agent
+# https://github.com/Aumnamaha/SentryMind
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+finalenv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+
+# Streamlit cache
+.streamlit/cache/

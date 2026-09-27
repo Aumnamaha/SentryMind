@@ -1,0 +1,23 @@
+[
+  {
+    "id": "INC-001",
+    "title": "PostgreSQL Connection Pool Exhausted",
+    "error_log": "FATAL: remaining connection slots are reserved for non-replication superuser connections",
+    "root_cause": "Unclosed client sessions during traffic spike.",
+    "resolution": "Run scripts/flush_pool.sh to drain idle connections; do NOT restart DB service."
+  },
+  {
+    "id": "INC-002",
+    "title": "Redis OOM Maxmemory Limit Reached",
+    "error_log": "OOM command not allowed when used memory > 'maxmemory'",
+    "root_cause": "Cache key TTL expiry failure.",
+    "resolution": "Update eviction policy to allkeys-lru via redis-cli CONFIG SET maxmemory-policy allkeys-lru."
+  },
+  {
+    "id": "INC-003",
+    "title": "Kubernetes CrashLoopBackOff on Auth Microservice",
+    "error_log": "Error: Invalid OAUTH_CACHE_TTL format '300s' expected integer milliseconds",
+    "root_cause": "Malformed environment variable format in deployment manifest.",
+    "resolution": "Roll back env var OAUTH_CACHE_TTL to 300000 in config map."
+  }
+]

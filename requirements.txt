@@ -1,0 +1,6 @@
+hindsight-client
+groq
+requests
+python-dotenv
+pytest
+pydantic
