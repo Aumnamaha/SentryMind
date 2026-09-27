@@ -51,6 +51,14 @@ class TestSentryMindAgentUnit:
                 or "Local Fallback" in result
             )
 
+    def test_query_local_qwen_non_200_status(self):
+        agent = SentryMindAgent()
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        with patch("agent.core.requests.post", return_value=mock_response):
+            result = agent.query_local_qwen("test prompt")
+            assert "Local LLM Error" in result
+
     def test_analyze_log_without_memory(self):
         agent = SentryMindAgent()
         with patch.object(agent, "query_local_qwen", return_value="Generic advice"):
