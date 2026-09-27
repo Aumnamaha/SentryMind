@@ -6,3 +6,6 @@ pytest
 pydantic
 ruff
 black
+pytest-cov
+pip-audit
+mypy

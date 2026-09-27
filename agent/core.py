@@ -18,7 +18,9 @@ class SentryMindAgent:
                 "temperature": 0.2,
             }
             res = requests.post(
-                f"{LOCAL_LLM_URL}/chat/completions", json=payload, timeout=30
+                f"{LOCAL_LLM_URL}/chat/completions",
+                json=payload,  # type: ignore[arg-type]
+                timeout=30,
             )
             if res.status_code == 200:
                 return res.json()["choices"][0]["message"]["content"]

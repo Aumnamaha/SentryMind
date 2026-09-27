@@ -27,7 +27,7 @@ st.sidebar.header("🕹️ Incident Simulator Controls")
 scenario_titles = [f"{item['id']} - {item['title']}" for item in incident_scenarios]
 selected_title = st.sidebar.selectbox("Select Production Alert", scenario_titles)
 
-selected_incident = next(
+selected_incident: dict | None = next(
     (
         item
         for item in incident_scenarios
@@ -38,6 +38,7 @@ selected_incident = next(
 if selected_incident is None:
     st.error("Selected incident not found.")
     st.stop()
+assert selected_incident is not None  # for mypy
 
 # Display Current Raw Log Alert
 st.subheader("🚨 Incoming Production Alert Log")

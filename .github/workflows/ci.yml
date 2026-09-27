@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   sentrymind:
-    name: SentryMind lint and test
+    name: SentryMind lint, type-check, security, and test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -31,6 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip install pytest-cov pip-audit mypy
 
       - name: Lint with ruff
         run: ruff check .
@@ -38,13 +39,26 @@ jobs:
       - name: Format check with black
         run: black --check .
 
-      - name: Run tests
-        run: python -m pytest tests/ -v
+      - name: Type check with mypy
+        run: mypy agent/ memory/ config.py app.py --ignore-missing-imports
+
+      - name: Security audit with pip-audit
+        run: pip-audit --desc
+
+      - name: Run tests with coverage
+        run: python -m pytest tests/ -v --cov=agent --cov=memory --cov-report=term-missing --cov-fail-under=80
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentrymind-coverage
+          path: htmlcov/
 
   webapp-backend:
-    name: Webapp Backend lint and test
+    name: Webapp Backend lint, type-check, security, and test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: webapp-backend
@@ -62,6 +76,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip install pytest-cov pip-audit mypy httpx
 
       - name: Lint with ruff
         run: ruff check .
@@ -69,16 +84,29 @@ jobs:
       - name: Format check with black
         run: black --check .
 
-      - name: Run tests
+      - name: Type check with mypy
+        run: mypy main.py --ignore-missing-imports
+
+      - name: Security audit with pip-audit
+        run: pip-audit --desc
+
+      - name: Run tests with coverage
         run: |
-          if [ -f tests/test_*.py ] || [ -d tests ]; then
-            python -m pytest tests/ -v
+          if [ -d tests ]; then
+            python -m pytest tests/ -v --cov=. --cov-report=term-missing --cov-fail-under=80
           else
             echo "No tests found, skipping."
           fi
 
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-backend-coverage
+          path: htmlcov/
+
   webapp-frontend:
-    name: Webapp Frontend lint and build
+    name: Webapp Frontend lint, format, security, and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -103,6 +131,9 @@ jobs:
 
       - name: Format check with prettier
         run: npx prettier --check .
+
+      - name: Security audit with npm
+        run: npm audit --audit-level=high
 
       - name: Build
         run: npm run build
