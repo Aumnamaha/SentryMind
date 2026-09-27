@@ -1,8 +1,9 @@
-import os
 import json
+import os
+
 import streamlit as st
+
 from agent.core import SentryMindAgent
-from memory.hindsight_client import SentryMemoryManager
 
 st.set_page_config(page_title="SentryMind | DevOps Memory Agent", layout="wide")
 
@@ -27,7 +28,11 @@ scenario_titles = [f"{item['id']} - {item['title']}" for item in incident_scenar
 selected_title = st.sidebar.selectbox("Select Production Alert", scenario_titles)
 
 selected_incident = next(
-    (item for item in incident_scenarios if f"{item['id']} - {item['title']}" == selected_title),
+    (
+        item
+        for item in incident_scenarios
+        if f"{item['id']} - {item['title']}" == selected_title
+    ),
     None,
 )
 if selected_incident is None:
@@ -37,6 +42,7 @@ if selected_incident is None:
 # Display Current Raw Log Alert
 st.subheader("🚨 Incoming Production Alert Log")
 st.code(selected_incident["error_log"], language="log")
+
 
 # Instantiate Agent
 @st.cache_resource
@@ -62,7 +68,9 @@ with col1:
 
     if st.button("Analyze Log (Without Memory)"):
         with st.spinner("Generating baseline guess..."):
-            res_baseline = agent.analyze_log(selected_incident["error_log"], use_memory=False)
+            res_baseline = agent.analyze_log(
+                selected_incident["error_log"], use_memory=False
+            )
             st.json(res_baseline)
 
 # --- RIGHT COLUMN: With Hindsight Memory ---
@@ -72,22 +80,34 @@ with col2:
 
     if st.button("Analyze Log (With Hindsight Recall)"):
         with st.spinner("Querying Hindsight Memory Bank & Qwen..."):
-            res_memory = agent.analyze_log(selected_incident["error_log"], use_memory=True)
+            res_memory = agent.analyze_log(
+                selected_incident["error_log"], use_memory=True
+            )
             st.json(res_memory)
 
 st.markdown("---")
 
 # Incident Resolution & Memory Retain Section
 st.subheader("📥 Retain New Incident Learnings")
-st.write("Resolved a new incident? Push the verified root cause and fix back to Hindsight Bank.")
+st.write(
+    "Resolved a new incident? Push the verified root cause and fix back to Hindsight Bank."
+)
 
 with st.form("retain_form"):
     inc_id = st.text_input("Incident ID", value="INC-004")
-    raw_log_input = st.text_area("Raw Log Message", value="ERROR: Redis Connection Timeout on Port 6379")
-    root_cause_input = st.text_input("Discovered Root Cause", value="Stale DNS record on Auth Gateway")
-    fix_input = st.text_input("Verified Fix Action", value="Run systemctl restart systemd-resolved")
+    raw_log_input = st.text_area(
+        "Raw Log Message", value="ERROR: Redis Connection Timeout on Port 6379"
+    )
+    root_cause_input = st.text_input(
+        "Discovered Root Cause", value="Stale DNS record on Auth Gateway"
+    )
+    fix_input = st.text_input(
+        "Verified Fix Action", value="Run systemctl restart systemd-resolved"
+    )
 
     submit_retain = st.form_submit_button("Store in Hindsight Memory")
     if submit_retain:
-        res = agent.resolve_and_retain(inc_id, raw_log_input, root_cause_input, fix_input)
+        res = agent.resolve_and_retain(
+            inc_id, raw_log_input, root_cause_input, fix_input
+        )
         st.success(f"Successfully stored in Hindsight Bank! Response: {res['status']}")

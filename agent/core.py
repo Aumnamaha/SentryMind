@@ -1,11 +1,13 @@
+from typing import Any
+
 import requests
-from typing import Dict, Any, Optional
+
 from config import LOCAL_LLM_URL, LOCAL_MODEL_NAME
 from memory.hindsight_client import SentryMemoryManager
 
 
 class SentryMindAgent:
-    def __init__(self, memory_manager: Optional[SentryMemoryManager] = None):
+    def __init__(self, memory_manager: SentryMemoryManager | None = None):
         self.memory = memory_manager or SentryMemoryManager()
 
     def query_local_qwen(self, prompt: str) -> str:
@@ -20,11 +22,11 @@ class SentryMindAgent:
             )
             if res.status_code == 200:
                 return res.json()["choices"][0]["message"]["content"]
-        except Exception:
+        except requests.RequestException:
             return "[Offline / Local Fallback Mode] Query processed using local rule engine."
         return "[Local LLM Error] No response generated."
 
-    def analyze_log(self, raw_log: str, use_memory: bool = True) -> Dict[str, Any]:
+    def analyze_log(self, raw_log: str, use_memory: bool = True) -> dict[str, Any]:
         recalled_facts = []
         if use_memory:
             recall_res = self.memory.recall_resolution(query=raw_log)
@@ -60,7 +62,13 @@ class SentryMindAgent:
 
     def resolve_and_retain(
         self, incident_id: str, raw_log: str, root_cause: str, fix_action: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         content = f"Incident ID: {incident_id}. Error: {raw_log}. Root Cause: {root_cause}. Verified Fix: {fix_action}"
-        retain_res = self.memory.retain_incident(content=content, context="resolved_incident")
-        return {"status": "success", "retained_content": content, "hindsight_response": retain_res}
+        retain_res = self.memory.retain_incident(
+            content=content, context="resolved_incident"
+        )
+        return {
+            "status": "success",
+            "retained_content": content,
+            "hindsight_response": retain_res,
+        }

@@ -9,11 +9,10 @@ unavailable, making these tests safe for headless / CI environments.
 Run: pytest tests/test_cli_workflow.py -v
 """
 
-import sys
 import os
-from unittest.mock import patch
-import json
+import sys
 import time
+from unittest.mock import patch
 
 import pytest
 
@@ -34,13 +33,14 @@ MOCK_LLM_RESPONSE = (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="function")
 def fresh_agent():
     """Return a new agent with a clean local memory store and mocked LLM."""
     agent = SentryMindAgent(memory_manager=SentryMemoryManager())
     # Patch query_local_qwen to avoid network calls
     patcher = patch.object(agent, "query_local_qwen", return_value=MOCK_LLM_RESPONSE)
-    mock_method = patcher.start()
+    patcher.start()
     agent._mock_llm_patcher = patcher  # keep reference for cleanup
     yield agent
     patcher.stop()
@@ -78,6 +78,7 @@ def shared_incident_data():
 # Core lifecycle test — the main end-to-end scenario
 # ---------------------------------------------------------------------------
 
+
 class TestFullIncidentLifecycle:
     """Single-incident retain → recall loop (the primary integration test)."""
 
@@ -113,10 +114,13 @@ class TestFullIncidentLifecycle:
 # Multi-scenario lifecycle tests — cross-incident recall verification
 # ---------------------------------------------------------------------------
 
+
 class TestMultiScenarioLifecycle:
     """Retain multiple incidents and verify each is independently recallable."""
 
-    def test_retain_all_scenarios_then_recall_each(self, fresh_agent, shared_incident_data):
+    def test_retain_all_scenarios_then_recall_each(
+        self, fresh_agent, shared_incident_data
+    ):
         """Ingest all three original incidents, then query each one individually."""
         for inc in shared_incident_data:
             fresh_agent.resolve_and_retain(
@@ -170,6 +174,7 @@ class TestMultiScenarioLifecycle:
 # Without-memory baseline comparison tests
 # ---------------------------------------------------------------------------
 
+
 class TestBaselineVsMemory:
     """Verify the before/after contrast that the Streamlit visualizer displays."""
 
@@ -218,6 +223,7 @@ class TestBaselineVsMemory:
 # Local fallback safety tests — no external services required
 # ---------------------------------------------------------------------------
 
+
 class TestLocalFallbackSafety:
     """Ensure the agent and memory manager handle missing services gracefully."""
 
@@ -265,7 +271,9 @@ class TestLocalFallbackSafety:
     def test_agent_without_hindsight_cloud(self):
         """When Hindsight Cloud API is unreachable, memory falls back to local store."""
         # Use a custom manager pointing at an obviously-invalid URL
-        fallback_mgr = SentryMemoryManager(base_url="http://127.0.0.1:1", bank_id="sentrymind-devops")
+        fallback_mgr = SentryMemoryManager(
+            base_url="http://127.0.0.1:1", bank_id="sentrymind-devops"
+        )
         agent = SentryMindAgent(memory_manager=fallback_mgr)
 
         with patch.object(agent, "query_local_qwen", return_value=MOCK_LLM_RESPONSE):
@@ -288,6 +296,7 @@ class TestLocalFallbackSafety:
 # ---------------------------------------------------------------------------
 # Edge-case and robustness tests
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeCases:
     """Boundary conditions and unusual inputs."""
@@ -348,6 +357,7 @@ class TestEdgeCases:
 # Performance / timing guardrail (non-blocking)
 # ---------------------------------------------------------------------------
 
+
 class TestPerformance:
     """Quick sanity checks that the workflow doesn't hang indefinitely."""
 
@@ -370,5 +380,7 @@ class TestPerformance:
             )
 
             elapsed = time.monotonic() - start
-            assert elapsed < 2.0, f"Retain→recall roundtrip took {elapsed:.2f}s (expected <2s)"
+            assert (
+                elapsed < 2.0
+            ), f"Retain→recall roundtrip took {elapsed:.2f}s (expected <2s)"
             assert analysis["use_memory"] is True
