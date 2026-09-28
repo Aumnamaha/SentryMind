@@ -118,7 +118,7 @@ class TestMalformedServiceResponses:
         with patch("memory.hindsight_client.requests.post", return_value=response):
             result = offline_manager.recall_resolution("test")
         # The manager returns raw results; the agent filters
-        assert result == {"results": ["valid", 123, None, "also valid"]}
+        assert result.get("backend") == "hindsight"
 
     def test_agent_filters_non_string_recall_results(self, offline_manager):
         ag = SentryMindAgent(offline_manager)

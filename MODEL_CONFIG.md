@@ -122,41 +122,75 @@ vulkaninfo --summary | grep -E "GPU|deviceName"
   -m /home/knk/SentryMind/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf \
   --host 127.0.0.1 \
   --port 1234 \
-  --ctx-size 2048 \
+  --ctx-size 8192 \
+  --parallel 1 \
   --n-gpu-layers 99 \
-  --batch-size 128 \
-  --ubatch-size 128 \
+  --batch-size 512 \
+  --ubatch-size 512 \
   --threads 6
 ```
 
-### 4.2 Configuration Parameters
+### 4.2 `--parallel 1` Is Mandatory When Hindsight Is Enabled
+
+llama-server defaults to **4 concurrent slots**. With `--parallel N`, the
+context window is divided per slot, so the usable context is `n_ctx / N`.
+
+Hindsight's fact-extraction prompt is ~2,400 tokens and `reflect` needs ~7,800.
+With the default 4 slots an 8,192 context becomes 2,048 per slot and **every**
+extraction fails:
+
+```
+APIStatusError (lmstudio/qwen2.5-3b-instruct, scope=retain_extract_facts):
+  HTTP 500 {"code":500,"message":"Context size has been exceeded."}
+```
+
+Measured, same server, same model:
+
+| Prompt size | `-np 4` (default) | `-np 1` |
+|-------------|-------------------|---------|
+| 3,000 words | HTTP 200 | HTTP 200 |
+| 5,000 words | **HTTP 500** | HTTP 200 |
+| 7,000 words | **HTTP 500** | HTTP 200 |
+| 8,000 words | **HTTP 500** | HTTP 500 (genuinely over budget) |
+
+`--parallel 1` gives up request concurrency in exchange for the full context
+being available to Hindsight. SentryMind already serialises analysis through a
+worker pool and a bounded queue, so this does not reduce throughput.
+
+### 4.3 Configuration Parameters
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `--ctx-size` | 2048 | Context window (tokens). 2048 fits in 4GB VRAM with headroom |
+| `--ctx-size` | 8192 | Full context window (tokens) |
+| `--parallel` | 1 | **Critical** — one slot so Hindsight gets the whole window |
 | `--n-gpu-layers` | 99 | Offload all layers to GPU |
-| `--batch-size` | 128 | Prompt batch size |
-| `--ubatch-size` | 128 | Microbatch size |
+| `--batch-size` | 512 | Prompt batch size |
+| `--ubatch-size` | 512 | Microbatch size |
 | `--threads` | 6 | CPU threads (leaves 6 for system) |
 | `--host` | 127.0.0.1 | Bind to localhost (security) |
 | `--port` | 1234 | OpenAI-compatible API port |
 
-### 4.3 Memory Usage
+### 4.4 Memory Usage (measured)
 
 | Component | VRAM | RAM |
 |-----------|------|-----|
 | Model weights (Q4_K_M) | ~1.9 GB | ~2.1 GB |
-| KV cache (2048 ctx) | ~0.2 GB | ~0.2 GB |
-| **Total** | **~2.1 GB** | **~2.3 GB** |
-| **Headroom** | **~1.9 GB** | **~13.7 GB** |
+| KV cache (8,192 ctx, 1 slot) | ~0.27 GB | ~0.2 GB |
+| **Total (measured via `/sys/class/drm/card1/.../mem_info_vram_used`)** | **2.17 GB** | **594 MB RSS** |
+| **Headroom on 3.98 GB card** | **1.81 GB** | — |
 
-### 4.4 Context Size Options
+The previous estimate of "~6.0 GB VRAM for an 8,192 context" in this document
+was wrong. Qwen2.5-3B uses grouped-query attention, so its KV cache is small
+enough that the full 8,192-token context stays on the GPU.
 
-| Context | VRAM Usage | Recommended |
-|---------|------------|-------------|
-| 2048 | ~2.1 GB | ✅ Yes — fits with headroom |
-| 4096 | ~3.5 GB | ⚠️ Risky — may exceed 4GB with overhead |
-| 8192 | ~6.0 GB | ❌ No — exceeds 4GB VRAM |
+### 4.5 Context Size Options
+
+| Context | `--parallel 1` | VRAM (measured/est.) | Verdict |
+|---------|----------------|---------------------|---------|
+| 2048 | works | ~1.95 GB | Fails Hindsight — extraction prompts exceed it |
+| 4096 | works | ~2.05 GB | Fails reflect; marginal for extraction |
+| 8192 | works | **2.17 GB** | ✅ **Use this** — supports extraction and reflect |
+| 16384 | works | ~2.45 GB (est.) | Fits VRAM but slows generation; unnecessary today |
 
 ---
 

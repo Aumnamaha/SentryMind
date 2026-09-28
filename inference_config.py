@@ -33,15 +33,19 @@ LLAMA_SERVER_PATH = os.getenv(
 # Inference parameters
 # ---------------------------------------------------------------------------
 
-# Context size (tokens)
-CONTEXT_SIZE = int(os.getenv("SENTRYMIND_CONTEXT_SIZE", "2048"))
+# Context size (tokens).
+# 8192 is required by the official Hindsight service: its fact-extraction
+# prompt is ~2,400 tokens and reflect needs ~7,800. Measured VRAM cost of the
+# full window on a 4 GB card is 2.17 GB total, because Qwen2.5-3B uses
+# grouped-query attention. See MODEL_CONFIG.md section 4.
+CONTEXT_SIZE = int(os.getenv("SENTRYMIND_CONTEXT_SIZE", "8192"))
 
 # GPU offload layers (99 = all layers on GPU)
 GPU_LAYERS = int(os.getenv("SENTRYMIND_GPU_LAYERS", "99"))
 
 # Batch size and microbatch size
-BATCH_SIZE = int(os.getenv("SENTRYMIND_BATCH_SIZE", "128"))
-UBATCH_SIZE = int(os.getenv("SENTRYMIND_UBATCH_SIZE", "128"))
+BATCH_SIZE = int(os.getenv("SENTRYMIND_BATCH_SIZE", "512"))
+UBATCH_SIZE = int(os.getenv("SENTRYMIND_UBATCH_SIZE", "512"))
 
 # Number of concurrent inference slots
 NUM_SLOTS = int(os.getenv("SENTRYMIND_NUM_SLOTS", "1"))
@@ -89,3 +93,22 @@ LLAMA_PORT = int(os.getenv("SENTRYMIND_LLAMA_PORT", "1234"))
 
 # Number of CPU threads for llama.cpp
 LLAMA_THREADS = int(os.getenv("SENTRYMIND_LLAMA_THREADS", "6"))
+
+# ---------------------------------------------------------------------------
+# Hindsight memory service
+# ---------------------------------------------------------------------------
+
+# Hindsight API timeout (seconds) for retain and recall.
+HINDSIGHT_TIMEOUT = int(os.getenv("SENTRYMIND_HINDSIGHT_TIMEOUT", "30"))
+
+# Hindsight reflect timeout (seconds).
+# Reflect is an LLM synthesis over every observation in the bank; measured 38.5 s
+# uncontended and ~254 s when it queues behind fact extraction on the single
+# llama.cpp slot. It needs its own, much larger budget: sharing
+# HINDSIGHT_TIMEOUT (30 s) made reflect abort client-side and silently degrade
+# to the local fallback on every call. Kept just under the server-side
+# HINDSIGHT_API_REFLECT_LLM_TIMEOUT (600 s) so the server, not the client,
+# remains the authority on how long a synthesis may run.
+HINDSIGHT_REFLECT_TIMEOUT = int(
+    os.getenv("SENTRYMIND_HINDSIGHT_REFLECT_TIMEOUT", "540")
+)

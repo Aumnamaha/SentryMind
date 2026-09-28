@@ -9,19 +9,39 @@
 
 ### 1.1 Start Services
 
+The simplest path — `start_demo.sh` brings up llama.cpp, the official Hindsight
+service, and the UI, and waits for each to be healthy:
+
 ```bash
-# Terminal 1: Start inference server (takes ~30s to load model)
+cd /home/knk/SentryMind
+./start_demo.sh              # add --no-memory to skip Hindsight
+./start_demo.sh --status     # check what is running
+```
+
+To start them by hand instead:
+
+```bash
+# Terminal 1: inference server (takes ~30s to load the model)
+# NOTE --parallel 1 is required. llama-server defaults to 4 slots and splits
+# the context window between them, which breaks every Hindsight extraction
+# with "Context size has been exceeded". See MODEL_CONFIG.md section 4.2.
 cd /home/knk/SentryMind/models
 /tmp/opencode/llama.cpp/build/bin/llama-server \
   -m Qwen2.5-3B-Instruct-Q4_K_M.gguf \
   --host 127.0.0.1 --port 1234 \
-  --ctx-size 2048 --n-gpu-layers 99 \
-  --batch-size 128 --ubatch-size 128 \
+  --ctx-size 8192 --parallel 1 --n-gpu-layers 99 \
+  --batch-size 512 --ubatch-size 512 \
   --threads 6
 
 # Wait for "listening on http://127.0.0.1:1234"
 
-# Terminal 2: Start Streamlit UI
+# Terminal 2: official Vectorize Hindsight (port 8888, persistent)
+cd /home/knk/SentryMind
+bash start_hindsight.sh
+
+# Wait for {"status":"healthy","database":"connected"}
+
+# Terminal 3: Streamlit UI
 cd /home/knk/SentryMind
 .venv/bin/streamlit run app.py
 
@@ -34,9 +54,26 @@ cd /home/knk/SentryMind
 # Check inference server
 curl -s http://127.0.0.1:1234/v1/models | python3 -m json.tool
 
+# Check the official memory service (port 8888, not 8080)
+curl -s http://127.0.0.1:8888/health
+
 # Check VRAM usage
 cat /sys/class/drm/card1/device/mem_info_vram_used | awk '{printf "%.2f GB\n", $1/1024/1024/1024}'
+# Expected: ~2.17 GB of 3.98 GB
 ```
+
+### 1.3 Know the Memory Banner
+
+The UI labels the memory source explicitly, and the label is never
+misleading — a mock or a fallback is never shown as official Hindsight:
+
+| Banner | Meaning |
+|--------|---------|
+| `HINDSIGHT (persistent)` | Official Vectorize Hindsight. Survives restarts. |
+| `LOCAL FALLBACK (in-memory only, NOT persistent)` | Service unreachable. Memory is lost on restart. |
+
+If you see the fallback banner during a demo, stop and fix it — the "it
+remembers" narrative does not hold without the real service.
 
 ---
 
@@ -181,22 +218,64 @@ ls -la /home/knk/SentryMind/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf
 
 **Symptom:** Server crashes or shows OOM errors
 
-**Fix:**
-```bash
-# Reduce context size
-export SENTRYMIND_CONTEXT_SIZE=1024
+**Note:** measured VRAM at the full 8,192 context is only 2.17 GB of 3.98 GB,
+so this is unlikely with the shipped flags. Qwen2.5-3B's grouped-query
+attention keeps the KV cache small.
 
-# Or use CPU fallback (slower but stable)
+**Fix, in order of preference:**
+```bash
+# 1. Reduce batch size first — this costs the least (no context reduction)
+--batch-size 256 --ubatch-size 256
+
+# 2. Only if that is not enough, reduce the context.
+#    WARNING: below 8192 Hindsight fact extraction (~2.4k tokens) and
+#    reflect (~8k tokens) will fail. Do not drop below 4096 if you are
+#    demoing memory.
+--ctx-size 4096
+
+# 3. Last resort, CPU-only. Usable but ~10x slower:
 --n-gpu-layers 0 --threads 12
 ```
 
-### 5.4 If Memory Service is Unavailable
+### 5.4 If the Official Memory Service is Unavailable
 
-**Behavior:** Agent falls back to local in-memory store (transparent)
+**Behavior:** the agent falls back to a local in-memory store and the UI shows
+`LOCAL FALLBACK (in-memory only, NOT persistent)`.
 
-**User Impact:** Memory works locally but is not persistent across restarts
+**User impact:** memory works for the current session but is lost on restart.
 
-**Demo Impact:** None — the fallback is seamless and clearly indicated
+**Demo impact:** this *does* undercut the "it remembers across restarts"
+narrative. Fix it rather than demoing around it:
+
+```bash
+curl -s http://127.0.0.1:8888/health    # expect "healthy"
+
+# If it is down, restart it and wait ~30s for model load
+tmux kill-session -t hindsight 2>/dev/null
+tmux new-session -d -s hindsight "bash /home/knk/SentryMind/start_hindsight.sh"
+
+# Prove persistence is real (this is the strongest demo moment available)
+.venv/bin/python scripts/persistence_probe.py retain
+# restart the service, then:
+.venv/bin/python scripts/persistence_probe.py recall
+# -> "POST-RESTART MEMORY SURVIVED: True"
+```
+
+If you genuinely cannot get it running, demo without memory
+(`./start_demo.sh --no-memory`) and say so plainly. Do not let the fallback
+banner stand in for the real service.
+
+### 5.5 If Retain Appears to Succeed but Nothing Is Remembered
+
+**This is expected behaviour and it will bite you during a demo.** Retain is
+asynchronous: it returns HTTP 200 with `operation_ids` immediately and the LLM
+extracts facts in the background. On a 3B model, extraction of a *short*
+incident reliably succeeds, but a *long* one exhausts Hindsight's per-task
+deadline and yields 0 facts while retain still reported success.
+
+**Fix:** use a short incident for the retain demo. Keep it to one or two
+sentences — the short PostgreSQL/Redis/Kubernetes incidents in §3.1 all extract
+cleanly. Then wait a few seconds before the recall step.
 
 ---
 
@@ -206,9 +285,11 @@ If anything goes wrong during the demo:
 
 1. **Don't panic** — the system is designed to degrade gracefully
 2. **Check inference server:** `curl -s http://127.0.0.1:1234/v1/models`
-3. **Restart if needed:** Use the commands in Section 1.1
-4. **Fallback to CPU:** If Vulkan fails, use `--n-gpu-layers 0`
-5. **Continue demo:** The UI works even without the LLM (shows fallback messages)
+3. **Check memory service:** `curl -s http://127.0.0.1:8888/health`
+4. **Restart if needed:** Use the commands in Section 1.1
+5. **Fallback to CPU:** If Vulkan fails, use `--n-gpu-layers 0`
+6. **Continue demo:** the UI works even without the LLM — but say out loud that
+   you are now in degraded mode rather than pretending it is the real thing
 
 ---
 
@@ -220,19 +301,29 @@ If anything goes wrong during the demo:
 4. **"Privacy by design"** — Secrets redacted before any external call
 5. **"Transparent uncertainty"** — Confidence levels and uncertainty clearly displayed
 6. **"Suggests, doesn't execute"** — All remediation labeled "NOT verified"
+7. **"The memory is real and it's yours"** — Official Vectorize Hindsight with
+   an embedded PostgreSQL database on disk. Restart the service live and recall
+   the same incident; the bank survives because the records came back from the
+   database, not from a cache. We verified 13/13 fact IDs surviving a full
+   restart.
 
 ---
 
 ## 8. Post-Demo Cleanup
 
 ```bash
-# Stop inference server
-kill $(lsof -t -i:1234)
-
-# Stop Streamlit
-# Ctrl+C in the Streamlit terminal
+# Stop everything
+./start_demo.sh --stop
 
 # Verify GPU memory released
 cat /sys/class/drm/card1/device/mem_info_vram_used | awk '{printf "%.2f GB\n", $1/1024/1024/1024}'
 # Should show ~0 GB
+```
+
+Hindsight's data is **not** deleted by `--stop`: the embedded PostgreSQL lives
+in `~/.pg0`, so memories persist across demo sessions. Remove it only if you
+want a clean slate:
+
+```bash
+rm -rf ~/.pg0
 ```

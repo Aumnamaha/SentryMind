@@ -32,6 +32,27 @@ cd webapp-backend
 ../.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8001 &
 ```
 
+### 1.4 Start the Official Hindsight Service (optional)
+
+The default test run does **not** need this — every memory test uses mocks and
+`conftest.py` blocks outbound HTTP. Only the live tests in §2.5 need it.
+
+```bash
+cd /home/knk/SentryMind
+.venv/bin/pip install -r requirements-hindsight.txt   # once
+bash start_hindsight.sh                               # official API, port 8888
+curl -s http://127.0.0.1:8888/health
+# Expected: {"status":"healthy","database":"connected",...}
+```
+
+Note the port: the **official** service is on 8888. A legacy mock service may
+also be running on 8080; point `HINDSIGHT_API_URL` at whichever you intend to
+test, and be explicit about it, because the two have different response
+schemas. See `OFFICIAL_HINDSIGHT_REPORT.md` §4.
+
+llama.cpp must be running for Hindsight to be able to do any LLM work, and it
+**must** use `--parallel 1` — see `MODEL_CONFIG.md` §4.2.
+
 ---
 
 ## 2. Running the Full Test Suite
@@ -43,18 +64,25 @@ cd /home/knk/SentryMind
 .venv/bin/python -m pytest tests/ webapp-backend/tests/ -v --tb=short
 ```
 
-**Expected:** 294 passed, 14 skipped
+**Expected:** 375 passed, 21 skipped
 
-### 2.2 With Coverage
+### 2.2 With Coverage (exactly as CI runs it)
 
 ```bash
-.venv/bin/python -m pytest tests/ webapp-backend/tests/ \
-  --cov=agent --cov=memory --cov-report=term-missing
+.venv/bin/python -m pytest tests/ --cov=agent --cov=memory \
+  --cov-report=term-missing --cov-fail-under=90
 ```
 
-**Expected:** 100% coverage on agent/core.py and memory/hindsight_client.py
+**Expected:** ~97% total; the gate is 90%
 
-### 2.3 Live Integration Tests
+```text
+Name                         Stmts   Miss Branch BrPart  Cover
+agent/core.py                  109      3     34      3    96%
+memory/hindsight_client.py     134      0     50      4    98%
+TOTAL                          243      3     84      7    97%
+```
+
+### 2.3 Live API Tests
 
 ```bash
 # Terminal 1: Start server
@@ -68,16 +96,29 @@ SENTRYMIND_RUN_LIVE_INTEGRATION=1 ../.venv/bin/python -m pytest tests/test_api_l
 
 **Expected:** 12 passed
 
-### 2.4 Live LLM/Hindsight Integration Tests
+### 2.4 Official Hindsight Protocol Tests (no live service needed)
 
 ```bash
-# Requires LM Studio and Hindsight running
-export LOCAL_LLM_URL=http://localhost:1234/v1
-export HINDSIGHT_API_URL=http://localhost:8080
-SENTRYMIND_RUN_LIVE_INTEGRATION=1 .venv/bin/python -m pytest tests/real_services/test_live_services.py -v
+.venv/bin/python -m pytest tests/test_hindsight_official_adapter.py -v
 ```
 
-**Expected:** 2 passed (if services are running)
+**Expected:** 37 passed. These pin the official API wire contract — multipart
+retain, `404`-then-provision, `text` vs `content`, `results` must be a list,
+reflect reads `text`, `/health` readiness — entirely with mocks.
+
+### 2.5 Live LLM + Official Hindsight Tests
+
+Requires llama.cpp on 1234 and Hindsight on 8888.
+
+```bash
+export LOCAL_LLM_URL=http://127.0.0.1:1234/v1
+export HINDSIGHT_API_URL=http://127.0.0.1:8888
+SENTRYMIND_RUN_LIVE_INTEGRATION=1 .venv/bin/python -m pytest \
+  tests/real_services/test_live_services.py tests/test_official_hindsight.py -v
+```
+
+**Expected:** 9 passed. Allow ~4 minutes — the reflect test alone measures
+156 s against the real service.
 
 ---
 
@@ -144,6 +185,21 @@ SENTRYMIND_RUN_LIVE_INTEGRATION=1 ../.venv/bin/python -m pytest tests/test_api_l
 ```bash
 .venv/bin/python -m pytest tests/test_security_reliability.py -v
 ```
+
+### 3.11 Official Hindsight Adapter Tests (mocked)
+
+```bash
+.venv/bin/python -m pytest tests/test_hindsight_official_adapter.py -v
+```
+
+### 3.12 Official Hindsight Live Tests
+
+```bash
+SENTRYMIND_RUN_LIVE_INTEGRATION=1 HINDSIGHT_API_URL=http://127.0.0.1:8888 \
+  .venv/bin/python -m pytest tests/test_official_hindsight.py -v
+```
+
+Skipped unless `SENTRYMIND_RUN_LIVE_INTEGRATION=1` **and** the service is up.
 
 ---
 
@@ -261,6 +317,8 @@ ps aux | grep "uvicorn.*8001" | grep -v grep | awk '{print "CPU:", $3"%", "MEM:"
 | `tests/test_memory_integration.py` | 67 | Hindsight memory integration |
 | `tests/test_security_injection.py` | 44 | Security and fault injection |
 | `tests/test_branch_coverage.py` | 11 | Branch coverage completion |
+| `tests/test_hindsight_official_adapter.py` | 37 | Official Hindsight wire contract (mocked) |
+| `tests/test_official_hindsight.py` | 7 | Opt-in live official Hindsight |
 | `webapp-backend/tests/test_api.py` | 56 | FastAPI endpoint tests (in-process) |
 | `webapp-backend/tests/test_api_live.py` | 12 | Live HTTP integration tests |
 | `tests/real_services/test_live_services.py` | 2 | Opt-in live LLM/Hindsight |
@@ -273,12 +331,22 @@ ps aux | grep "uvicorn.*8001" | grep -v grep | awk '{print "CPU:", $3"%", "MEM:"
 ### 8.1 Integration Marker
 
 Tests marked with `@pytest.mark.integration` require external services:
-- `tests/real_services/test_live_services.py` — requires LM Studio and Hindsight
+- `tests/real_services/test_live_services.py` — requires llama.cpp on 1234 and Hindsight
+- `tests/test_official_hindsight.py` — requires the official Hindsight on 8888
 - `webapp-backend/tests/test_api_live.py` — requires Uvicorn on port 8001
 
 These tests are **skipped by default** and only run when `SENTRYMIND_RUN_LIVE_INTEGRATION=1` is set.
 
-### 8.2 Hypothesis
+### 8.2 Timeouts
+
+`pyproject.toml` sets a global `--timeout=20`. Live LLM tests override it with
+an explicit marker (`@pytest.mark.timeout(120)` for the LLM, `400` for
+reflect). This is not slack: llama.cpp runs with `--parallel 1` so Hindsight's
+~2.4k-token extraction prompt gets the full 8,192-token context, which means
+there is exactly one inference slot and requests queue behind each other. A
+20 s budget is a coin flip under those conditions.
+
+### 8.3 Hypothesis
 
 `tests/test_security_reliability.py` uses Hypothesis for property-based testing:
 - `test_arbitrary_incident_text_never_crashes_analysis` — tests with random text inputs
@@ -301,10 +369,31 @@ These tests are **skipped by default** and only run when `SENTRYMIND_RUN_LIVE_IN
 
 **Fix:** `kill $(lsof -t -i:8001)` or use a different port.
 
-### 9.4 Coverage Below 100%
+### 9.4 Coverage Below the 90% Gate
 
-**Cause:** New code added without tests.  
-**Fix:** Run `coverage report -m` to find uncovered lines.
+**Cause:** New code added without tests. CI runs
+`pytest tests/ --cov=agent --cov=memory --cov-fail-under=90`.  
+**Fix:** Run `coverage report -m` to find uncovered lines. The gate is 90%, not
+100% — but the official Hindsight adapter must stay well above it, because it is
+the component whose bugs were silent.
+
+### 9.5 `test_official_reflect_returns_synthesis` Times Out
+
+**Cause:** Reflect is a multi-call synthesis on a single inference slot. It
+measures 156 s; the marker allows 400 s. Anything that issues LLM requests
+concurrently — notably tight-loop recall polling — will make it slower still.  
+**Fix:** Stop polling recall in a loop while the suite runs. The service log at
+`tmux capture-pane -t hindsight -p -S -200` shows slot contention.
+
+### 9.6 Live Memory Test Fails Because `HINDSIGHT_API_URL` Is Unset
+
+**By design.** `tests/real_services/test_live_services.py` calls
+`pytest.fail` when the variable is missing, so a live run cannot silently pass
+by skipping the memory check. Set it explicitly:
+
+```bash
+export HINDSIGHT_API_URL=http://127.0.0.1:8888
+```
 
 ---
 

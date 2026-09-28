@@ -1,0 +1,33 @@
+# Official Vectorize Hindsight memory service.
+#
+# Kept separate from requirements.txt on purpose: this pulls in ~900 MB of
+# CPU-only PyTorch and transformer weights, and CI does not need it. The
+# application degrades to a non-persistent in-process store when Hindsight is
+# absent, so a plain `pip install -r requirements.txt` install still runs and
+# still passes every test — it just cannot persist memory.
+#
+# Install with:
+#   .venv/bin/pip install -r requirements-hindsight.txt
+#
+# Then start the service with ./start_hindsight.sh (or ./start_demo.sh).
+
+# The official Hindsight API server. [embedded-db] pulls in pg0-embedded,
+# which runs PostgreSQL inside the process so no separate database container
+# is needed. Data persists in ~/.pg0 across restarts.
+hindsight-api-slim[embedded-db]>=0.10,<1
+
+# Local embeddings (BAAI/bge-small-en-v1.5) and reranking
+# (cross-encoder/ms-marco-MiniLM-L-6-v2). Both run on CPU by design, which
+# keeps VRAM entirely available to the LLM.
+#
+# The official `latest-slim` Docker image cannot do this: it ships without
+# sentence-transformers and aborts at startup with "The API will fail at
+# startup". Installing the official PyPI package on the host is what makes
+# CPU-local embeddings possible within this project's RAM budget.
+sentence-transformers
+
+# CPU-only torch. The default index would pull the CUDA build (~2.5 GB plus
+# the NVIDIA driver stack), which TASKS.md explicitly forbids. See
+# install note below.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch

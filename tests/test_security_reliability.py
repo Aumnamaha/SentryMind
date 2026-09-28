@@ -67,13 +67,22 @@ def test_concurrent_distinct_incidents_are_all_recallable(local_manager):
 
 
 @pytest.mark.parametrize("payload", [None, [], {"results": "not-a-list"}, {"oops": 1}])
-def test_malformed_successful_recall_response_uses_fallback(local_manager, payload):
-    local_manager.retain_incident("database connection pool timeout")
+def test_malformed_successful_recall_response_uses_fallback(payload):
+    # Use an unreachable URL to force local fallback
+    from memory.hindsight_client import SentryMemoryManager
+
+    mgr = SentryMemoryManager(base_url="http://127.0.0.1:1")
+    with patch(
+        "memory.hindsight_client.requests.post",
+        side_effect=requests.ConnectionError("offline"),
+    ):
+        mgr.retain_incident("database connection pool timeout")
     response = MagicMock(status_code=200)
     response.json.return_value = payload
     with patch("memory.hindsight_client.requests.post", return_value=response):
-        result = local_manager.recall_resolution("database connection pool")
+        result = mgr.recall_resolution("database connection pool")
     assert result["status"] == "recalled_locally"
+    assert result["backend"] == "local_fallback"
     assert result["results"] == ["database connection pool timeout"]
 
 

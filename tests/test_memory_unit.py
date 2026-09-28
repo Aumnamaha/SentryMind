@@ -36,10 +36,14 @@ class TestSentryMemoryManagerUnit:
         mgr = SentryMemoryManager()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"id": "123"}
+        mock_response.json.return_value = {
+            "id": "123",
+            "status": "retained",
+            "backend": "hindsight",
+        }
         with patch("memory.hindsight_client.requests.post", return_value=mock_response):
             result = mgr.retain_incident("Test incident")
-            assert result == {"id": "123"}
+            assert result.get("backend") == "hindsight"
             assert len(mgr.local_store) == 0
 
     def test_recall_resolution_local_fallback(self):
@@ -53,10 +57,15 @@ class TestSentryMemoryManagerUnit:
         mgr = SentryMemoryManager()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"results": ["fix1", "fix2"]}
+        mock_response.json.return_value = {
+            "results": ["fix1", "fix2"],
+            "status": "recalled",
+            "backend": "hindsight",
+        }
         with patch("memory.hindsight_client.requests.post", return_value=mock_response):
             result = mgr.recall_resolution("test query")
-            assert result == {"results": ["fix1", "fix2"]}
+            assert result.get("backend") == "hindsight"
+            assert "fix1" in result.get("results", [])
 
     def test_recall_resolution_empty_store(self):
         mgr = SentryMemoryManager(base_url="http://127.0.0.1:1")

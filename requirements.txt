@@ -10,3 +10,10 @@ mypy
 streamlit>=1.35,<2
 hypothesis>=6.100,<7
 bandit>=1.7,<2
+
+# Pinned explicitly so `pip-audit` is deterministic: the GitHub runner's
+# bundled setuptools is below 78.1.1 (PYSEC-2025-49, path traversal) and
+# 83.0.0 (PYSEC-2026-3447, MANIFEST.in Unicode-normalisation bypass). pip
+# does not upgrade setuptools on its own, so without this the audit fails
+# depending on which base image the runner uses.
+setuptools>=83.0.0
