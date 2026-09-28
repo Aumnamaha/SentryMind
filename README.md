@@ -1,20 +1,20 @@
 # 🛡️ SentryMind: Autonomous DevOps Incident Response Agent
 
-> **An LLM-powered incident response agent with persistent memory — so it remembers the fixes instead of guessing.**
+> **An LLM-assisted incident triage tool that retrieves historical context for operator review.**
 
 ---
 
 ## Executive Overview
 
-Production LLM agents are great at troubleshooting, but terrible at remembering they already solved the same problem yesterday. Every alert triggers a fresh guess — often the wrong one. **SentryMind** solves this by plugging a local Qwen 35B model into [Hindsight Cloud](https://hindsight.vectorize.io/) persistent memory, giving agents the ability to recall verified runbook fixes from past post-mortems and act on them with high confidence.
+**SentryMind** sends redacted incident text to a configured local LLM and retrieves matching incident history from Hindsight. Retrieved notes are untrusted historical context: the agent asks operators to review and verify any suggested action. The local fallback uses keyword overlap and can miss relevant incidents or return imperfect matches.
 
 ---
 
 ## Key Features
 
-- **Side-by-Side Before/After Memory Contrast** — The Streamlit UI shows a stateless agent guessing "restart service" next to a memory-augmented agent returning exact, proven runbooks.
+- **Side-by-Side Memory Contrast** — The Streamlit UI compares generic triage with analysis that includes historical context.
 - **Dynamic Hindsight Retain & Recall Pipeline** — Ingest new incidents in real-time through the UI; the agent immediately starts recalling them on future alerts.
-- **Offline Fallback Support** — Works entirely locally with no external services: in-memory store for Hindsight Cloud + local LLM inference via LM Studio / Qwen 35B. Perfect for CI, air-gapped environments, and development.
+- **Offline Fallback Support** — Hindsight failures use an in-memory keyword fallback. LLM failures return an offline status; deterministic CI tests mock service calls.
 
 ---
 
@@ -64,7 +64,7 @@ flowchart TD
     B -->|use_memory=True| D[Hindsight Memory Bank]
     C --> E[Generic 'Restart' Advice\nLow Confidence]
     D --> F[Semantic Recall of Past Post-Mortems]
-    F --> G[Verified Runbook Fix\nHigh Confidence]
+    F --> G[Historical Context\nOperator Verification Required]
     H[New Incident Resolved] --> I[resolve_and_retain]\
     I --> J[Store in Memory Bank]
 
@@ -134,7 +134,7 @@ Open `http://localhost:8501` in your browser. Select an incident, then click **"
 
 ```bash
 python -m pytest tests/ -v --tb=short
-# All tests pass with mocked LLM — zero network dependencies required.
+# The deterministic suite blocks external HTTP calls; optional live checks are separate.
 ```
 
 ---
@@ -174,7 +174,7 @@ recalled_facts = self.memory.recall_resolution(query=raw_log)
 # Returns: {"results": [matching incident descriptions]}
 ```
 
-The local fallback uses keyword-based matching (tokens > 3 characters) against stored entries. When connected to Hindsight Cloud, it leverages vector embeddings for true semantic similarity — meaning `"OOM command not allowed"` will match a past incident about Redis memory limits even if the exact words differ.
+The local fallback uses token-boundary keyword overlap (tokens longer than three characters) and requires multiple matching terms for multi-term queries. It is not semantic search. Remote recall behavior depends on the configured Hindsight service and its response format. All returned context must be reviewed; a match does not prove that a suggested fix is safe or applicable.
 
 ### `reflect()` — Analyze Memory Patterns
 
@@ -254,5 +254,3 @@ Microsoft Hackathon/
 
 **Author:** Aum Namaha — Final-Year CSE/AIML Student  
 **License:** MIT
-
-

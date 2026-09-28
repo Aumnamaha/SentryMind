@@ -92,7 +92,8 @@ class TestSentryMindAgentUnit:
             result = agent.analyze_log("some error", use_memory=True)
             assert result["use_memory"] is True
             assert result["memory_active"] is True
-            assert "High" in result["confidence"]
+            assert "Moderate" in result["confidence"]
+            assert "verify before action" in result["confidence"].lower()
 
     def test_resolve_and_retain(self):
         agent = SentryMindAgent()

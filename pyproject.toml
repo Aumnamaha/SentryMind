@@ -1,0 +1,25 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --timeout=20"
+markers = [
+  "integration: integration tests that contact explicitly configured real services",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["agent", "memory"]
+omit = ["*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+exclude = ["webapp-frontend/node_modules"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "webapp-backend/tests"]
+skips = []

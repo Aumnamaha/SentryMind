@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pytest-cov pip-audit mypy
+          python -m pip install pytest-cov pip-audit mypy bandit
 
       - name: Lint with ruff
         run: ruff check .
@@ -45,15 +45,36 @@ jobs:
       - name: Security audit with pip-audit
         run: pip-audit --desc
 
+      - name: Static security scan with Bandit
+        run: bandit -r agent memory app.py config.py data -ll
+
       - name: Run tests with coverage
-        run: python -m pytest tests/ -v --cov=agent --cov=memory --cov-report=term-missing --cov-fail-under=80
+        run: python -m pytest tests/ -v --cov=agent --cov=memory --cov-report=term-missing --cov-report=xml --cov-fail-under=90
 
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sentrymind-coverage
-          path: htmlcov/
+          path: coverage.xml
+
+      - name: Run performance benchmark
+        run: python tests/performance_benchmark.py
+        continue-on-error: true
+
+      - name: Verify no stack traces in API errors
+        run: |
+          python -c "
+          import sys; sys.path.insert(0, 'webapp-backend')
+          from main import app
+          from fastapi.testclient import TestClient
+          client = TestClient(app)
+          r = client.get('/nonexistent')
+          assert r.status_code == 404
+          assert 'traceback' not in r.text.lower()
+          assert 'File \"' not in r.text
+          print('API error responses are safe (no stack traces)')
+          "
 
   webapp-backend:
     name: Webapp Backend lint, type-check, security, and test
@@ -90,10 +111,13 @@ jobs:
       - name: Security audit with pip-audit
         run: pip-audit --desc
 
+      - name: Static security scan with Bandit
+        run: bandit -r main.py -ll
+
       - name: Run tests with coverage
         run: |
           if [ -d tests ]; then
-            python -m pytest tests/ -v --cov=. --cov-report=term-missing --cov-fail-under=80
+            python -m pytest tests/ -v --cov=main --cov-report=term-missing --cov-report=xml --cov-fail-under=90
           else
             echo "No tests found, skipping."
           fi
@@ -103,7 +127,25 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: webapp-backend-coverage
-          path: htmlcov/
+          path: coverage.xml
+
+      - name: Verify API error responses are safe
+        run: |
+          python -c "
+          from main import app
+          from fastapi.testclient import TestClient
+          client = TestClient(app)
+          # Test 404
+          r = client.get('/nonexistent')
+          assert r.status_code == 404
+          assert 'traceback' not in r.text.lower()
+          assert 'File \"' not in r.text
+          # Test 405
+          r = client.post('/')
+          assert r.status_code == 405
+          assert 'traceback' not in r.text.lower()
+          print('API error responses are safe (no stack traces)')
+          "
 
   webapp-frontend:
     name: Webapp Frontend lint, format, security, and build

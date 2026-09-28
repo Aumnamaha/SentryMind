@@ -252,7 +252,7 @@ class TestLocalFallbackSafety:
         with patch.object(agent, "query_local_qwen", return_value=MOCK_LLM_RESPONSE):
             # Seed memory so recall works locally
             agent.memory.retain_incident(
-                "Test: connection timeout -> Run flush_pool.sh",
+                "Test: FATAL remaining connection slots reserved replication superuser connections timeout -> Run flush_pool.sh",
                 context="test",
             )
 

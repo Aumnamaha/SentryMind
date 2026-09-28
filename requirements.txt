@@ -1,11 +1,12 @@
-hindsight-client
-groq
 requests
 python-dotenv
 pytest
-pydantic
 ruff
 black
 pytest-cov
+pytest-timeout
 pip-audit
 mypy
+streamlit>=1.35,<2
+hypothesis>=6.100,<7
+bandit>=1.7,<2

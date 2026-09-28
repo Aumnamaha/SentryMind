@@ -16,9 +16,7 @@ def test_before_vs_after_memory_comparison():
     assert "Low" in res_no_mem["confidence"]
 
     # Seed explicit item into local memory manager to guarantee recall
-    agent.memory.retain_incident(
-        "FATAL: remaining connection slots -> Run scripts/flush_pool.sh"
-    )
+    agent.memory.retain_incident(f"{sample_log} -> Run scripts/flush_pool.sh")
 
     # After Memory
     res_with_mem = agent.analyze_log(sample_log, use_memory=True)
