@@ -31,7 +31,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pytest-cov pip-audit mypy bandit
+          # fastapi/httpx are needed by the "Verify no stack traces" step below,
+          # which imports webapp-backend/main.py. They are not runtime
+          # dependencies of the Streamlit app, so they are not in
+          # requirements.txt.
+          python -m pip install pytest-cov pip-audit mypy bandit fastapi httpx
 
       - name: Lint with ruff
         run: ruff check .
@@ -97,7 +101,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
-          python -m pip install pytest-cov pip-audit mypy httpx
+          # bandit was missing here, so the Bandit step below failed with
+          # "command not found" and never actually scanned anything.
+          python -m pip install pytest-cov pip-audit mypy httpx bandit
 
       - name: Lint with ruff
         run: ruff check .
@@ -130,6 +136,12 @@ jobs:
           path: coverage.xml
 
       - name: Verify API error responses are safe
+        # This job runs with working-directory: webapp-backend, so the repo
+        # root is not importable and main.py's `from inference_config import ...`
+        # fails. tests/test_api.py inserts the root on sys.path for the same
+        # reason; PYTHONPATH does it here.
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           python -c "
           from main import app
