@@ -90,11 +90,47 @@ async def recall(bank_id: str, request: RecallRequest):
 
     # Simple keyword matching (same as local fallback)
     stop_words = {
-        "the", "and", "for", "with", "from", "that", "this", "are", "was",
-        "has", "have", "not", "but", "all", "can", "had", "her", "one", "our",
-        "out", "day", "get", "him", "his", "how", "its", "may", "new", "now",
-        "old", "see", "two", "way", "who", "did", "let", "put", "say", "she",
-        "too", "use",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "that",
+        "this",
+        "are",
+        "was",
+        "has",
+        "have",
+        "not",
+        "but",
+        "all",
+        "can",
+        "had",
+        "her",
+        "one",
+        "our",
+        "out",
+        "day",
+        "get",
+        "him",
+        "his",
+        "how",
+        "its",
+        "may",
+        "new",
+        "now",
+        "old",
+        "see",
+        "two",
+        "way",
+        "who",
+        "did",
+        "let",
+        "put",
+        "say",
+        "she",
+        "too",
+        "use",
     }
     query_words = {
         w.lower()
@@ -120,9 +156,22 @@ async def reflect(bank_id: str, request: ReflectRequest):
         return {"reflection": "No incidents in memory yet.", "status": "reflected"}
 
     all_text = " ".join(item["content"].lower() for item in _store[bank_id])
-    keywords = ["connection", "timeout", "memory", "cache", "oom", "fatal", "error", "crash"]
+    keywords = [
+        "connection",
+        "timeout",
+        "memory",
+        "cache",
+        "oom",
+        "fatal",
+        "error",
+        "crash",
+    ]
     found = [kw for kw in keywords if kw in all_text]
-    reflection = f"Observed patterns: {', '.join(found)}." if found else "No recurring patterns detected yet."
+    reflection = (
+        f"Observed patterns: {', '.join(found)}."
+        if found
+        else "No recurring patterns detected yet."
+    )
     return {"reflection": reflection, "status": "reflected"}
 
 

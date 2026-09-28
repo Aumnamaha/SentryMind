@@ -142,7 +142,9 @@ class SentryMindAgent:
 
     @staticmethod
     def _limit_recall_results(
-        facts: list[str], max_results: int = MAX_RECALL_RESULTS, max_tokens: int = MAX_RECALL_TOKENS
+        facts: list[str],
+        max_results: int = MAX_RECALL_RESULTS,
+        max_tokens: int = MAX_RECALL_TOKENS,
     ) -> list[str]:
         """Limit recalled memories by count and token budget."""
         limited = []
@@ -214,11 +216,27 @@ class SentryMindAgent:
                 "use_memory": use_memory,
                 "memory_active": False,
                 "memory_source": memory_source,
-                "root_cause": structured.get("diagnosis", "Uncertain / Unknown (No Memory Context)") if structured else "Uncertain / Unknown (No Memory Context)",
+                "root_cause": (
+                    structured.get(
+                        "diagnosis", "Uncertain / Unknown (No Memory Context)"
+                    )
+                    if structured
+                    else "Uncertain / Unknown (No Memory Context)"
+                ),
                 "hypotheses": structured.get("hypotheses", []) if structured else [],
-                "recommended_action": structured.get("remediation", "Standard generic triage: Restart service.") if structured else "Standard generic triage: Restart service.",
+                "recommended_action": (
+                    structured.get(
+                        "remediation", "Standard generic triage: Restart service."
+                    )
+                    if structured
+                    else "Standard generic triage: Restart service."
+                ),
                 "llm_response": llm_output,
-                "confidence": structured.get("confidence", "Low (Baseline Local LLM Guess)") if structured else "Low (Baseline Local LLM Guess)",
+                "confidence": (
+                    structured.get("confidence", "Low (Baseline Local LLM Guess)")
+                    if structured
+                    else "Low (Baseline Local LLM Guess)"
+                ),
                 "recalled_context": [],
                 "evidence": structured.get("evidence", []) if structured else [],
                 "uncertainty": structured.get("uncertainty", "") if structured else "",
@@ -240,11 +258,31 @@ class SentryMindAgent:
             "use_memory": True,
             "memory_active": True,
             "memory_source": memory_source,
-            "root_cause": structured.get("diagnosis", "Potentially related historical incident; verify against current evidence.") if structured else "Potentially related historical incident; verify against current evidence.",
+            "root_cause": (
+                structured.get(
+                    "diagnosis",
+                    "Potentially related historical incident; verify against current evidence.",
+                )
+                if structured
+                else "Potentially related historical incident; verify against current evidence."
+            ),
             "hypotheses": structured.get("hypotheses", []) if structured else [],
-            "recommended_action": structured.get("remediation", f"Review historical runbook context before taking action: {recalled_facts}") if structured else f"Review historical runbook context before taking action: {recalled_facts}",
+            "recommended_action": (
+                structured.get(
+                    "remediation",
+                    f"Review historical runbook context before taking action: {recalled_facts}",
+                )
+                if structured
+                else f"Review historical runbook context before taking action: {recalled_facts}"
+            ),
             "llm_response": llm_output,
-            "confidence": structured.get("confidence", "Moderate (Historical context; verify before action)") if structured else "Moderate (Historical context; verify before action)",
+            "confidence": (
+                structured.get(
+                    "confidence", "Moderate (Historical context; verify before action)"
+                )
+                if structured
+                else "Moderate (Historical context; verify before action)"
+            ),
             "recalled_context": recalled_facts,
             "evidence": structured.get("evidence", []) if structured else [],
             "uncertainty": structured.get("uncertainty", "") if structured else "",

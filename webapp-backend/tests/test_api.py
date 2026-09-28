@@ -173,7 +173,7 @@ def test_404_does_not_expose_stack_trace():
     body = response.text
     assert "traceback" not in body.lower()
     assert "stack" not in body.lower()
-    assert "File \"" not in body
+    assert 'File "' not in body
 
 
 # ---------------------------------------------------------------------------
@@ -351,7 +351,7 @@ def test_404_error_format_is_safe():
     body = response.text
     assert "traceback" not in body.lower()
     assert "stack" not in body.lower()
-    assert "File \"" not in body
+    assert 'File "' not in body
     assert "site-packages" not in body
 
 
@@ -360,7 +360,7 @@ def test_405_error_format_is_safe():
     body = response.text
     assert "traceback" not in body.lower()
     assert "stack" not in body.lower()
-    assert "File \"" not in body
+    assert 'File "' not in body
 
 
 def test_error_responses_are_json():
@@ -468,7 +468,9 @@ def test_analyze_endpoint_returns_200():
             "uncertainty": "",
             "next_checks": [],
         }
-        response = request("POST", "/analyze", json={"log": "test error", "use_memory": False})
+        response = request(
+            "POST", "/analyze", json={"log": "test error", "use_memory": False}
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["root_cause"] == "test cause"
@@ -482,7 +484,9 @@ def test_analyze_endpoint_returns_503_when_queue_full():
     original = main._request_queue_size
     main._request_queue_size = main._max_queue_size
     try:
-        response = request("POST", "/analyze", json={"log": "test", "use_memory": False})
+        response = request(
+            "POST", "/analyze", json={"log": "test", "use_memory": False}
+        )
         assert response.status_code == 503
     finally:
         main._request_queue_size = original
@@ -493,7 +497,9 @@ def test_analyze_endpoint_returns_500_on_inference_failure():
     from unittest.mock import patch
 
     with patch("main._analyze_sync", side_effect=RuntimeError("inference failed")):
-        response = request("POST", "/analyze", json={"log": "test", "use_memory": False})
+        response = request(
+            "POST", "/analyze", json={"log": "test", "use_memory": False}
+        )
         assert response.status_code == 500
 
 

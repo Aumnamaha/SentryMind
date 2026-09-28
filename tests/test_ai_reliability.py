@@ -139,7 +139,9 @@ class TestKubernetesOOMKilled:
         assert result["memory_active"] is True
         assert len(result["recalled_context"]) > 0
 
-    def test_k8s_oomkilled_recalled_fix_not_presented_as_verified(self, offline_manager, agent):
+    def test_k8s_oomkilled_recalled_fix_not_presented_as_verified(
+        self, offline_manager, agent
+    ):
         """Recalled fix must not be presented as verified/executed."""
         offline_manager.retain_incident(
             "Container auth-service OOMKilled memory limit exceeded. "
@@ -205,7 +207,10 @@ class TestContradictoryEvidence:
         )
         result = agent.analyze_log(self.LOG, use_memory=True)
         # Even with memory, contradictory evidence should yield moderate confidence
-        assert "Moderate" in result["confidence"] or "verify" in result["confidence"].lower()
+        assert (
+            "Moderate" in result["confidence"]
+            or "verify" in result["confidence"].lower()
+        )
 
 
 class TestEmptyLogs:
@@ -311,7 +316,10 @@ class TestPromptInjection:
         prompt = llm.call_args.args[0]
         assert "untrusted" in prompt.lower()
         # The response should not present the injection as a verified fix
-        assert "rm -rf /" not in result["recommended_action"] or "review" in result["recommended_action"].lower()
+        assert (
+            "rm -rf /" not in result["recommended_action"]
+            or "review" in result["recommended_action"].lower()
+        )
 
     def test_unicode_prompt_injection(self, agent):
         """Unicode-based injection attempts must not break the prompt."""
@@ -496,9 +504,7 @@ class TestLLMResponseHandling:
 
     def test_llm_returns_none_content(self, raw_agent):
         response = MagicMock(status_code=200)
-        response.json.return_value = {
-            "choices": [{"message": {"content": None}}]
-        }
+        response.json.return_value = {"choices": [{"message": {"content": None}}]}
         with patch("agent.core.requests.post", return_value=response):
             result = raw_agent.query_local_qwen("test")
         assert "Local LLM Error" in result

@@ -44,7 +44,9 @@ if "last_analysis" not in st.session_state:
 # ---------------------------------------------------------------------------
 
 st.title("🛡️ SentryMind: AI Incident Response Agent")
-st.caption("Local LLM-powered incident triage with Hindsight memory — runs entirely on your machine")
+st.caption(
+    "Local LLM-powered incident triage with Hindsight memory — runs entirely on your machine"
+)
 
 st.markdown("---")
 
@@ -87,6 +89,7 @@ st.code(selected_incident["error_log"], language="log")
 # Instantiate Agent
 # ---------------------------------------------------------------------------
 
+
 @st.cache_resource
 def get_agent():
     return SentryMindAgent()
@@ -127,7 +130,10 @@ with col1:
                 "latency_ms": latency,
             }
 
-    if st.session_state.last_analysis and st.session_state.last_analysis["type"] == "no_memory":
+    if (
+        st.session_state.last_analysis
+        and st.session_state.last_analysis["type"] == "no_memory"
+    ):
         res = st.session_state.last_analysis["result"]
         latency = st.session_state.last_analysis["latency_ms"]
 
@@ -174,14 +180,19 @@ with col2:
                 "latency_ms": latency,
             }
 
-    if st.session_state.last_analysis and st.session_state.last_analysis["type"] == "with_memory":
+    if (
+        st.session_state.last_analysis
+        and st.session_state.last_analysis["type"] == "with_memory"
+    ):
         res = st.session_state.last_analysis["result"]
         latency = st.session_state.last_analysis["latency_ms"]
 
         # Memory source indicator — critical for distinguishing fallback from persistent
         memory_source = res.get("memory_source", "unknown")
         if memory_source == "local_fallback":
-            st.error("⚠️ Memory source: LOCAL FALLBACK (in-memory only, NOT persistent)")
+            st.error(
+                "⚠️ Memory source: LOCAL FALLBACK (in-memory only, NOT persistent)"
+            )
         elif memory_source == "hindsight":
             st.success("✅ Memory source: HINDSIGHT (persistent)")
         else:
@@ -226,9 +237,13 @@ st.markdown("---")
 st.subheader("🔒 Privacy Protection")
 
 with st.expander("Show secret redaction in action"):
-    st.markdown("SentryMind automatically redacts secrets before sending data to the LLM:")
+    st.markdown(
+        "SentryMind automatically redacts secrets before sending data to the LLM:"
+    )
 
-    sample_log = "ERROR api_key=sk-test-12345 password=hunter2 database connection failed"
+    sample_log = (
+        "ERROR api_key=sk-test-12345 password=hunter2 database connection failed"
+    )
     st.markdown("**Original log:**")
     st.code(sample_log, language="log")
 
@@ -236,7 +251,9 @@ with st.expander("Show secret redaction in action"):
     st.markdown("**After redaction:**")
     st.code(redacted, language="log")
 
-    st.markdown("✅ Secrets are redacted before LLM calls, memory recall, and retention.")
+    st.markdown(
+        "✅ Secrets are redacted before LLM calls, memory recall, and retention."
+    )
 
 # ---------------------------------------------------------------------------
 # Performance Dashboard
@@ -264,6 +281,7 @@ if show_performance:
     # Inference status
     try:
         import requests
+
         resp = requests.get("http://127.0.0.1:1234/v1/models", timeout=2)
         if resp.status_code == 200:
             st.success("🟢 Local LLM (llama.cpp) is running")

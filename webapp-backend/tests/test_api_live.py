@@ -42,7 +42,9 @@ def _http_get(path: str, timeout: float = 5.0) -> tuple[int, str, dict]:
         return e.code, body, {k.lower(): v for k, v in e.headers.items()}
 
 
-def _http_request(method: str, path: str, timeout: float = 5.0) -> tuple[int, str, dict]:
+def _http_request(
+    method: str, path: str, timeout: float = 5.0
+) -> tuple[int, str, dict]:
     """Perform a real HTTP request and return (status, body, headers)."""
     from urllib.parse import quote
 
@@ -149,7 +151,7 @@ def test_live_error_responses_do_not_expose_stack_traces():
     status, body, _ = _http_get("/nonexistent")
     assert status == 404
     assert "traceback" not in body.lower()
-    assert "File \"" not in body
+    assert 'File "' not in body
     assert "site-packages" not in body
 
 

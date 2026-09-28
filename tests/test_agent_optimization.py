@@ -59,7 +59,10 @@ class TestLogTruncation:
         assert "FATAL: out of memory" in result
 
     def test_oom_lines_preserved(self, agent):
-        log = "INFO: normal operation\n" * 100 + "OOMKilled: container exceeded memory limit"
+        log = (
+            "INFO: normal operation\n" * 100
+            + "OOMKilled: container exceeded memory limit"
+        )
         result = agent._truncate_log(log, max_length=100)
         assert "OOMKilled" in result
 

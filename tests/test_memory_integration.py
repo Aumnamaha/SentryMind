@@ -146,7 +146,9 @@ class TestAccurateRecall:
         local_manager.retain_incident(
             "PostgreSQL connection pool exhausted by idle sessions"
         )
-        result = local_manager.recall_resolution("PostgreSQL connection slots exhausted")
+        result = local_manager.recall_resolution(
+            "PostgreSQL connection slots exhausted"
+        )
         assert result["status"] == "recalled_locally"
         assert len(result["results"]) == 1
         assert "PostgreSQL" in result["results"][0]
@@ -271,7 +273,9 @@ class TestUnrelatedIncidentIsolation:
 
     def test_redis_incident_not_recalled_by_k8s_query(self, local_manager):
         local_manager.retain_incident("Redis OOM maxmemory eviction policy exhausted")
-        result = local_manager.recall_resolution("Kubernetes pod OOMKilled memory limit")
+        result = local_manager.recall_resolution(
+            "Kubernetes pod OOMKilled memory limit"
+        )
         assert result["results"] == []
 
     def test_pg_incident_not_recalled_by_redis_query(self, local_manager):

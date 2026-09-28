@@ -20,10 +20,14 @@ INFERENCE_URL = os.getenv("SENTRYMIND_INFERENCE_URL", "http://127.0.0.1:1234/v1"
 INFERENCE_MODEL = os.getenv("SENTRYMIND_INFERENCE_MODEL", "qwen2.5-3b-instruct")
 
 # Model file path (for llama.cpp server)
-MODEL_PATH = os.getenv("SENTRYMIND_MODEL_PATH", "models/Qwen2.5-3B-Instruct-Q4_K_M.gguf")
+MODEL_PATH = os.getenv(
+    "SENTRYMIND_MODEL_PATH", "models/Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+)
 
 # llama.cpp server binary path
-LLAMA_SERVER_PATH = os.getenv("SENTRYMIND_LLAMA_SERVER", "/tmp/opencode/llama.cpp/build/bin/llama-server")
+LLAMA_SERVER_PATH = os.getenv(
+    "SENTRYMIND_LLAMA_SERVER", "/tmp/opencode/llama.cpp/build/bin/llama-server"
+)
 
 # ---------------------------------------------------------------------------
 # Inference parameters

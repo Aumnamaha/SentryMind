@@ -52,13 +52,16 @@ def get_memory_usage_mb():
 def benchmark_api_latency():
     """Benchmark API endpoint latency using in-process ASGI transport."""
     import asyncio
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "webapp-backend"))
     import httpx
     from main import app
 
     async def request():
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
             return await client.get("/")
 
     def do_request():
@@ -70,13 +73,16 @@ def benchmark_api_latency():
 def benchmark_health_latency():
     """Benchmark /health endpoint latency."""
     import asyncio
+
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "webapp-backend"))
     import httpx
     from main import app
 
     async def request():
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
             return await client.get("/health")
 
     def do_request():
@@ -215,51 +221,69 @@ def main():
 
     print("--- API Latency (in-process ASGI) ---")
     api_stats = benchmark_api_latency()
-    print(f"GET /           mean={api_stats['mean_ms']:.3f}ms  "
-          f"median={api_stats['median_ms']:.3f}ms  "
-          f"p95={api_stats['p95_ms']:.3f}ms")
+    print(
+        f"GET /           mean={api_stats['mean_ms']:.3f}ms  "
+        f"median={api_stats['median_ms']:.3f}ms  "
+        f"p95={api_stats['p95_ms']:.3f}ms"
+    )
 
     health_stats = benchmark_health_latency()
-    print(f"GET /health     mean={health_stats['mean_ms']:.3f}ms  "
-          f"median={health_stats['median_ms']:.3f}ms  "
-          f"p95={health_stats['p95_ms']:.3f}ms")
+    print(
+        f"GET /health     mean={health_stats['mean_ms']:.3f}ms  "
+        f"median={health_stats['median_ms']:.3f}ms  "
+        f"p95={health_stats['p95_ms']:.3f}ms"
+    )
     print()
 
     print("--- Incident Analysis Latency (mocked LLM) ---")
     analysis_stats = benchmark_analysis_latency()
-    print(f"analyze (no mem) mean={analysis_stats['mean_ms']:.3f}ms  "
-          f"median={analysis_stats['median_ms']:.3f}ms  "
-          f"p95={analysis_stats['p95_ms']:.3f}ms")
+    print(
+        f"analyze (no mem) mean={analysis_stats['mean_ms']:.3f}ms  "
+        f"median={analysis_stats['median_ms']:.3f}ms  "
+        f"p95={analysis_stats['p95_ms']:.3f}ms"
+    )
 
     analysis_mem_stats = benchmark_analysis_with_memory_latency()
-    print(f"analyze (w/ mem) mean={analysis_mem_stats['mean_ms']:.3f}ms  "
-          f"median={analysis_mem_stats['median_ms']:.3f}ms  "
-          f"p95={analysis_mem_stats['p95_ms']:.3f}ms")
+    print(
+        f"analyze (w/ mem) mean={analysis_mem_stats['mean_ms']:.3f}ms  "
+        f"median={analysis_mem_stats['median_ms']:.3f}ms  "
+        f"p95={analysis_mem_stats['p95_ms']:.3f}ms"
+    )
     print()
 
     print("--- Memory Latency (local fallback) ---")
     retain_stats = benchmark_memory_retain_latency()
-    print(f"retain_incident  mean={retain_stats['mean_ms']:.3f}ms  "
-          f"median={retain_stats['median_ms']:.3f}ms  "
-          f"p95={retain_stats['p95_ms']:.3f}ms")
+    print(
+        f"retain_incident  mean={retain_stats['mean_ms']:.3f}ms  "
+        f"median={retain_stats['median_ms']:.3f}ms  "
+        f"p95={retain_stats['p95_ms']:.3f}ms"
+    )
 
     recall_stats = benchmark_memory_recall_latency()
-    print(f"recall_resolution mean={recall_stats['mean_ms']:.3f}ms  "
-          f"median={recall_stats['median_ms']:.3f}ms  "
-          f"p95={recall_stats['p95_ms']:.3f}ms")
+    print(
+        f"recall_resolution mean={recall_stats['mean_ms']:.3f}ms  "
+        f"median={recall_stats['median_ms']:.3f}ms  "
+        f"p95={recall_stats['p95_ms']:.3f}ms"
+    )
 
     roundtrip_stats = benchmark_retain_recall_roundtrip()
-    print(f"retain+recall    mean={roundtrip_stats['mean_ms']:.3f}ms  "
-          f"median={roundtrip_stats['median_ms']:.3f}ms  "
-          f"p95={roundtrip_stats['p95_ms']:.3f}ms")
+    print(
+        f"retain+recall    mean={roundtrip_stats['mean_ms']:.3f}ms  "
+        f"median={roundtrip_stats['median_ms']:.3f}ms  "
+        f"p95={roundtrip_stats['p95_ms']:.3f}ms"
+    )
     print()
 
     print("--- Bulk Operations ---")
     bulk_stats = benchmark_bulk_retain_recall()
-    print(f"Retain 100 incidents: {bulk_stats['retain_100_ms']:.2f}ms total "
-          f"({bulk_stats['retain_per_incident_ms']:.3f}ms each)")
-    print(f"Recall 100 times:    {bulk_stats['recall_100_ms']:.2f}ms total "
-          f"({bulk_stats['recall_per_call_ms']:.3f}ms each)")
+    print(
+        f"Retain 100 incidents: {bulk_stats['retain_100_ms']:.2f}ms total "
+        f"({bulk_stats['retain_per_incident_ms']:.3f}ms each)"
+    )
+    print(
+        f"Recall 100 times:    {bulk_stats['recall_100_ms']:.2f}ms total "
+        f"({bulk_stats['recall_per_call_ms']:.3f}ms each)"
+    )
     print()
 
     mem_after = get_memory_usage_mb()

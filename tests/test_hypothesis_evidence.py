@@ -68,7 +68,10 @@ class TestHypothesisVsEvidence:
         )
         with patch.object(agent, "query_local_qwen", return_value=structured_json):
             result = agent.analyze_log("test error", use_memory=False)
-        assert result["hypotheses"] == ["unclosed sessions (unverified)", "traffic spike (unverified)"]
+        assert result["hypotheses"] == [
+            "unclosed sessions (unverified)",
+            "traffic spike (unverified)",
+        ]
         assert result["root_cause"] == "connection slots exhausted"
         assert result["confidence"] == "low"
 
@@ -100,7 +103,10 @@ class TestMemorySourceTracking:
         from unittest.mock import MagicMock
 
         response = MagicMock(status_code=200)
-        response.json.return_value = {"results": ["remote incident fix"], "status": "recalled"}
+        response.json.return_value = {
+            "results": ["remote incident fix"],
+            "status": "recalled",
+        }
         with patch("memory.hindsight_client.requests.post", return_value=response):
             result = agent.analyze_log("test error", use_memory=True)
         assert result["memory_source"] == "hindsight"
@@ -136,7 +142,9 @@ class TestConfidenceCalibration:
             '"remediation": "review pool"}'
         )
         with patch.object(agent, "query_local_qwen", return_value=structured_json):
-            result = agent.analyze_log("FATAL: remaining connection slots", use_memory=False)
+            result = agent.analyze_log(
+                "FATAL: remaining connection slots", use_memory=False
+            )
         # Confidence should be low for a single log line
         assert result["confidence"] == "low"
 
