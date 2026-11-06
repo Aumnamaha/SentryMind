@@ -1,6 +1,17 @@
-# 🛡️ SentryMind: Autonomous DevOps Incident Response Agent
+# 🛡️ SentryMind — Autonomous DevOps Incident Response Agent
 
-> **An LLM-assisted incident triage tool that retrieves historical context for operator review.**
+> **LLM-assisted incident triage with historical memory retrieval from Hindsight — side-by-side analysis with and without past context.**
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://www.streamlit.app/)
+[![pytest](https://img.shields.io/badge/tests-deterministic%20suite-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+---
+
+## 📋 Executive Summary
+
+**SentryMind** is an LLM-assisted incident triage tool that retrieves historical context for operator review. It sends redacted incident text to a configured local LLM and matches against past incidents from Hindsight memory bank — providing operators with verified, historical context before suggesting actions.
 
 ---
 
